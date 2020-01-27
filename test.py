@@ -87,11 +87,12 @@ def run_tests(test_file_search: str) -> int:
                         continue
 
                     partial = template.partial(**test_set['partial_variables'])
-                    fail_count += _check_result(test[0], str(partial), expected_result)
+                    fail_count += _check_result(test[0] + ' partial', str(partial), expected_result)
                     if (2 < len(test)):
+                        fail_count += _check_result(test[0] + ' expanded partial == expanded', partial.expand(), template.expand(**test_set['partial_variables']))
                         result = str(partial.expand(**test_set['variables']))
-                        fail_count += _check_result(test[0], result, test[2])
-                        fail_count += _check_result(test[0], result, str(template.expand(**test_set['variables'])))
+                        fail_count += _check_result(test[0] + ' completed partial', result, test[2])
+                        fail_count += _check_result(test[0] + ' completed partial == fully expanded', result, str(template.expand(**test_set['variables'])))
     return fail_count
 
 
