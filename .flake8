@@ -1,0 +1,3 @@
+[flake8]
+max-line-length = 120
+ignore = D107, D401, W503, TYP002, TYP003, TYP101, TYP102
