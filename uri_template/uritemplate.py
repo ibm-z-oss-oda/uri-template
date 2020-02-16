@@ -123,3 +123,7 @@ class URITemplate(object):
     def __str__(self) -> str:
         """Convert to string, returns original template."""
         return ''.join([str(expansion) for expansion in self.expansions])
+
+    def __repr__(self) -> str:
+        """Convert to string, returns original template."""
+        return str(self)
