@@ -87,6 +87,7 @@ The package provides three functions:
 #### uri_template.expand(template: str, **kwargs) -> Optional[str]: ...
 
 Expand the given template, skipping missing values per RFC 6570.
+
 Returns `None` if the template is invalid or expansion fails.
 
 
@@ -183,21 +184,25 @@ And the following exceptions:
 #### uri_template.ExpansionInvalid
 
 Expansion specification is invalid. 
+
 Raised by URITemplate constructor.
 
 #### uri_template.ExpansionReserved
 
 Expansion contains a reserved operator.
+
 Raised by URITemplate constructor.
 
 #### uri_template.VariableInvalid
 
 Variable specification is invalid.
+
 Raised by URITemplate constructor.
 
 #### uri_template.ExpansionFailed
 
 Expansion failed, currently only possible when a composite value is passed to a variable with a prefix modifier.
+
 Raised by URITemplate.expand() or URITemplate.partial() methods.
 
 
