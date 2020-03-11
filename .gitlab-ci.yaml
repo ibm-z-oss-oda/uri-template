@@ -51,7 +51,7 @@ package:
       - dist
   only:
     - tags
-    - /^v[0-9]+\.[0-9]+(\.[0-9]+)[a-zA-Z]*$/
+    - /^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-\.]+)?$/
 
 
 deploy:
@@ -63,4 +63,4 @@ deploy:
     - python -m twine upload --username __token__ --password ${PYPI_API_TOKEN} --non-interactive --disable-progress-bar --repository-url ${PYPI_REPOSITORY_URL} dist/*
   only:
     - tags
-    - /^v[0-9]+\.[0-9]+(\.[0-9]+)[a-zA-Z]*$/
+    - /^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-\.]+)?$/

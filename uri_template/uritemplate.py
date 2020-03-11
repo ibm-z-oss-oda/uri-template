@@ -2,9 +2,9 @@
 
 import collections
 import re
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List
 
-from .expansions import (CommaExpansion, Expansion, ExpansionFailed,
+from .expansions import (CommaExpansion, Expansion,
                          FormStyleQueryContinuation, FormStyleQueryExpansion,
                          FragmentExpansion, LabelExpansion, Literal,
                          PathExpansion, PathStyleExpansion,
@@ -39,7 +39,11 @@ class ExpansionInvalid(Exception):
 
 
 class URITemplate(object):
-    """URI Template object."""
+    """
+    URI Template object.
+
+    Constructor may raise ExpansionReserved, ExpansionInvalid, or VariableInvalid.
+    """
 
     expansions: List[Expansion]
 
@@ -99,20 +103,22 @@ class URITemplate(object):
                 vars[var.name] = var
         return [var.name for var in vars.values()]
 
-    def expand(self, **kwargs) -> Optional[str]:
-        """Expand the template."""
-        try:
-            expanded = [expansion.expand(kwargs) for expansion in self.expansions]
-        except ExpansionFailed:
-            return None
+    def expand(self, **kwargs) -> str:
+        """
+        Expand the template.
+
+        May raise ExpansionFailed if a composite value is passed to a variable with a prefix modifier.
+        """
+        expanded = [expansion.expand(kwargs) for expansion in self.expansions]
         return ''.join([expansion for expansion in expanded if (expansion is not None)])
 
-    def partial(self, **kwargs) -> Optional['URITemplate']:
-        """Expand the template, preserving expansions for missing variables."""
-        try:
-            expanded = [expansion.partial(kwargs) for expansion in self.expansions]
-        except ExpansionFailed:
-            return None
+    def partial(self, **kwargs) -> 'URITemplate':
+        """
+        Expand the template, preserving expansions for missing variables.
+
+        May raise ExpansionFailed if a composite value is passed to a variable with a prefix modifier.
+        """
+        expanded = [expansion.partial(kwargs) for expansion in self.expansions]
         return URITemplate(''.join(expanded))
 
     @property

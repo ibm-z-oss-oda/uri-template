@@ -87,7 +87,7 @@ The package provides three functions:
 #### uri_template.expand(template: str, **kwargs) -> Optional[str]: ...
 
 Expand the given template, skipping missing values per RFC 6570.
-Returns `None` if the template is invalid.
+Returns `None` if the template is invalid or expansion fails.
 
 
 #### uri_template.partial(template: str, **kwargs) -> Optional[str]: ...
@@ -95,7 +95,7 @@ Returns `None` if the template is invalid.
 Partially expand the given template, 
 replacing missing variables with further expansions.
 
-Returns `None` if the template is invalid.
+Returns `None` if the template is invalid or expansion fails.
 
 
 #### uri_template.validate(template: str) -> bool: ...
@@ -111,7 +111,8 @@ And the following classes:
 #### URITemplate(template: str)
 
 Construct a URITemplate for a given template string.
-Raises `ExpansionInvalid`, `ExpansionReserved`, or `VariableInvalid`.
+
+Raises `ExpansionInvalid`, `ExpansionReserved`, or `VariableInvalid` if the template is invalid or unsupported.
 
 #### URITemplate.variables: Iterable[Variable]
 
@@ -127,15 +128,17 @@ Duplicates are returned once, order is preserved.
 
 Determine if template is fully expanded.
 
-#### URITemplate.expand(**kwargs) -> Optional[str]
+#### URITemplate.expand(**kwargs) -> str
 
 Returns the result of the expansion, skips missing variables.
-Returns `None` if the expansion fails.
 
-#### URITemplate.partial(**kwargs) -> Optional[URITemplate]
+Raises `ExpansionFailed` if the expansion fails due to a composite value being passed to a variable with a prefix modifier.
+
+#### URITemplate.partial(**kwargs) -> URITemplate
 
 Expand the template, replacing missing variables with further expansions.
-Returns `None` if the expansion fails.
+
+Raises `ExpansionFailed` if the expansion fails due to a composite value being passed to a variable with a prefix modifier.
 
 #### URITemplate.__str__() -> str
 
@@ -180,14 +183,22 @@ And the following exceptions:
 #### uri_template.ExpansionInvalid
 
 Expansion specification is invalid. 
+Raised by URITemplate constructor.
 
 #### uri_template.ExpansionReserved
 
 Expansion contains a reserved operator.
+Raised by URITemplate constructor.
 
 #### uri_template.VariableInvalid
 
 Variable specification is invalid.
+Raised by URITemplate constructor.
+
+#### uri_template.ExpansionFailed
+
+Expansion failed, currently only possible when a composite value is passed to a variable with a prefix modifier.
+Raised by URITemplate.expand() or URITemplate.partial() methods.
 
 
 ## Installation

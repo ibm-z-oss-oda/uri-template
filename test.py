@@ -61,16 +61,16 @@ def run_tests(test_file_search: str) -> int:
                         if (str(template) != test[0]):
                             _fail(test[0], str(template), test[0])
                             fail_count += 1
+
+                        result = template.expand(**test_set['variables'])
+                        fail_count += _check_result(test[0], result, expected_result)
                     except Exception:
                         if (expected_result):
                             _fail(test[0], 'Exception', expected_result)
                             fail_count += 1
                         else:
                             _pass(test[0], 'Exception')
-                        continue
 
-                    result = template.expand(**test_set['variables'])
-                    fail_count += _check_result(test[0], result, expected_result)
                 for test in test_set.get('partial_testcases', []):
                     expected_result = test[1]
                     try:
@@ -78,21 +78,21 @@ def run_tests(test_file_search: str) -> int:
                         if (str(template) != test[0]):
                             _fail(test[0], str(template), test[0])
                             fail_count += 1
+
+                        partial = template.partial(**test_set['partial_variables'])
+                        fail_count += _check_result(test[0] + ' partial', str(partial), expected_result)
+                        if (2 < len(test)):
+                            fail_count += _check_result(test[0] + ' expanded partial == expanded', partial.expand(), template.expand(**test_set['partial_variables']))
+                            result = str(partial.expand(**test_set['variables']))
+                            fail_count += _check_result(test[0] + ' completed partial', result, test[2])
+                            fail_count += _check_result(test[0] + ' completed partial == fully expanded', result, str(template.expand(**test_set['variables'])))
                     except Exception:
                         if (expected_result):
                             _fail(test[0], 'Exception', expected_result)
                             fail_count += 1
                         else:
                             _pass(test[0], 'Exception')
-                        continue
 
-                    partial = template.partial(**test_set['partial_variables'])
-                    fail_count += _check_result(test[0] + ' partial', str(partial), expected_result)
-                    if (2 < len(test)):
-                        fail_count += _check_result(test[0] + ' expanded partial == expanded', partial.expand(), template.expand(**test_set['partial_variables']))
-                        result = str(partial.expand(**test_set['variables']))
-                        fail_count += _check_result(test[0] + ' completed partial', result, test[2])
-                        fail_count += _check_result(test[0] + ' completed partial == fully expanded', result, str(template.expand(**test_set['variables'])))
     return fail_count
 
 
