@@ -7,7 +7,7 @@ from .charset import Charset
 from .variable import Variable
 
 
-class ExpansionFailed(Exception):
+class ExpansionFailedError(Exception):
     """Exception thrown when expansions fail."""
 
     variable: str
@@ -79,7 +79,7 @@ class Expansion(object):
         """Encode a string value for a variable."""
         if (variable.max_length):
             if (not first):
-                raise ExpansionFailed(str(variable))
+                raise ExpansionFailedError(str(variable))
             return self._join(prefix, joiner, self._uri_encode_value(value[:variable.max_length]))
         return self._join(prefix, joiner, self._uri_encode_value(value))
 
@@ -181,7 +181,7 @@ class ExpressionExpansion(Expansion):
     @property
     def variables(self) -> Iterable[Variable]:
         """Get all variables."""
-        return [var for var in self.vars]
+        return list(self.vars)
 
     @property
     def variable_names(self) -> Iterable[str]:

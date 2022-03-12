@@ -21,9 +21,24 @@ setuptools.setup(
     install_requires=[
     ],
     extras_require={
-        'dev': ['mypy',
-                'flake8', 'flake8-import-order', 'flake8-annotations', 'flake8-type-annotations', 'flake8-docstrings',
-                'pep8-naming'],
+        'dev': [
+            'mypy',
+            'flake8<4.0.0',
+            'flake8-annotations',
+            'flake8-bugbear',
+            'flake8-commas',
+            'flake8-comprehensions',
+            'flake8-continuation',
+            'flake8-datetimez',
+            'flake8-docstrings',
+            'flake8-import-order',
+            'flake8-literal',
+            'flake8-noqa',
+            'flake8-requirements',
+            'flake8-type-annotations',
+            'flake8-use-fstring',
+            'pep8-naming'
+        ],
     },
     classifiers=[
         "Programming Language :: Python :: 3",

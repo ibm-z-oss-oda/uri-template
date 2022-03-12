@@ -5,7 +5,7 @@ from typing import Optional
 from .charset import Charset
 
 
-class VariableInvalid(Exception):
+class VariableInvalidError(Exception):
     """Exception thrown for invalid variables."""
 
     variable: str
@@ -39,7 +39,7 @@ class Variable(object):
         self.default = None
 
         if (var_spec[0:1] not in Charset.VAR_START):
-            raise VariableInvalid(var_spec)
+            raise VariableInvalidError(var_spec)
 
         if ('=' in var_spec):
             var_spec, self.default = var_spec.split('=', 1)
@@ -49,12 +49,12 @@ class Variable(object):
             if ((0 < len(max_length)) and (len(max_length) < 4)):
                 for digit in max_length:
                     if (digit not in Charset.DIGIT):
-                        raise VariableInvalid(var_spec + ':' + max_length)
+                        raise VariableInvalidError(var_spec + ':' + max_length)
                 self.max_length = int(max_length)
                 if (not self.max_length):
-                    raise VariableInvalid(var_spec + ':' + max_length)
+                    raise VariableInvalidError(var_spec + ':' + max_length)
             else:
-                raise VariableInvalid(var_spec + ':' + max_length)
+                raise VariableInvalidError(var_spec + ':' + max_length)
         elif ('*' == var_spec[-1]):
             var_spec = var_spec[:-1]
             self.explode = True
@@ -75,8 +75,8 @@ class Variable(object):
             elif (codepoint in Charset.VAR_CHAR):
                 self.name += codepoint
             else:
-                raise VariableInvalid(var_spec + ((':' + str(self.max_length)) if (self.max_length) else '')
-                                      + ('[]' if (self.array) else ('*' if (self.explode) else '')))
+                raise VariableInvalidError(var_spec + ((':' + str(self.max_length)) if (self.max_length) else '')
+                                           + ('[]' if (self.array) else ('*' if (self.explode) else '')))
             index += 1
 
     def __str__(self) -> str:

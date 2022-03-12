@@ -2,12 +2,15 @@
 
 from typing import Optional
 
-from .expansions import ExpansionFailed
-from .uritemplate import ExpansionInvalid, ExpansionReserved, URITemplate
-from .variable import Variable, VariableInvalid
+from .expansions import ExpansionFailedError
+from .uritemplate import ExpansionInvalidError, ExpansionReservedError, URITemplate
+from .variable import Variable, VariableInvalidError
 
 
-__all__ = ['URITemplate', 'Variable', 'ExpansionInvalid', 'ExpansionReserved', 'VariableInvalid', 'ExpansionFailed']
+__all__ = [
+    'URITemplate', 'Variable',
+    'ExpansionInvalidError', 'ExpansionReservedError', 'VariableInvalidError', 'ExpansionFailedError',
+]
 
 
 def expand(template: str, **kwargs) -> Optional[str]:

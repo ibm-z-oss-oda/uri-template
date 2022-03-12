@@ -12,7 +12,7 @@ from .expansions import (CommaExpansion, Expansion,
 from .variable import Variable
 
 
-class ExpansionReserved(Exception):
+class ExpansionReservedError(Exception):
     """Exception thrown for reserved but unsupported expansions."""
 
     expansion: str
@@ -25,7 +25,7 @@ class ExpansionReserved(Exception):
         return 'Unsupported expansion: ' + self.expansion
 
 
-class ExpansionInvalid(Exception):
+class ExpansionInvalidError(Exception):
     """Exception thrown for unknown expansions."""
 
     expansion: str
@@ -42,7 +42,7 @@ class URITemplate(object):
     """
     URI Template object.
 
-    Constructor may raise ExpansionReserved, ExpansionInvalid, or VariableInvalid.
+    Constructor may raise ExpansionReservedError, ExpansionInvalidError, or VariableInvalidError.
     """
 
     expansions: List[Expansion]
@@ -76,14 +76,14 @@ class URITemplate(object):
                         else:
                             self.expansions.append(CommaExpansion(expansion))
                     elif (part[1] in '=!@|'):
-                        raise ExpansionReserved(part)
+                        raise ExpansionReservedError(part)
                     else:
-                        raise ExpansionInvalid(part)
+                        raise ExpansionInvalidError(part)
                 else:
                     if (('{' not in part) and ('}' not in part)):
                         self.expansions.append(Literal(part))
                     else:
-                        raise ExpansionInvalid(part)
+                        raise ExpansionInvalidError(part)
 
     @property
     def variables(self) -> Iterable[Variable]:

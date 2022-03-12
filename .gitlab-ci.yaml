@@ -29,8 +29,60 @@ mypy:
     - mypy ${PACKAGE_NAME}
 
 
-test:
+test_3.6:
   stage: test
+  before_script:
+    - pip install -e .
+    - chmod a+x test.py
+  script:
+    - ./test.py
+  rules:
+    - exists:
+        - test.py
+
+
+test_3.7:
+  stage: test
+  image: python:3.7
+  before_script:
+    - pip install -e .
+    - chmod a+x test.py
+  script:
+    - ./test.py
+  rules:
+    - exists:
+        - test.py
+
+
+test_3.8:
+  stage: test
+  image: python:3.8
+  before_script:
+    - pip install -e .
+    - chmod a+x test.py
+  script:
+    - ./test.py
+  rules:
+    - exists:
+        - test.py
+
+
+test_3.9:
+  stage: test
+  image: python:3.9
+  before_script:
+    - pip install -e .
+    - chmod a+x test.py
+  script:
+    - ./test.py
+  rules:
+    - exists:
+        - test.py
+
+
+test_3.10:
+  stage: test
+  image: python:3.10
   before_script:
     - pip install -e .
     - chmod a+x test.py
@@ -46,9 +98,9 @@ package:
   before_script:
     - chmod a+x tools/set_version
     - tools/set_version
-    - pip install --upgrade wheel
+    - pip install --upgrade build
   script:
-    - python setup.py bdist_wheel
+    - python -m build --no-isolation --outdir dist
   artifacts:
     paths:
       - dist
