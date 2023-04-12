@@ -1,5 +1,7 @@
 """Character sets."""
 
+from __future__ import annotations
+
 
 class Charset:
     """Define character sets used in other classes."""

@@ -1,4 +1,4 @@
-# uri_template
+# uri-template
 
 An implementation of RFC 6570 URI Templates.
 
@@ -84,14 +84,14 @@ but otherwise performs a Reserved Expansion ({+var}).
 
 The package provides three functions:
 
-#### uri_template.expand(template: str, **kwargs) -> Optional[str]: ...
+#### uri_template.expand(template: str, **kwargs) -> (str | None): ...
 
 Expand the given template, skipping missing values per RFC 6570.
 
 Returns `None` if the template is invalid or expansion fails.
 
 
-#### uri_template.partial(template: str, **kwargs) -> Optional[str]: ...
+#### uri_template.partial(template: str, **kwargs) -> (str | None): ...
 
 Partially expand the given template, 
 replacing missing variables with further expansions.
@@ -169,7 +169,7 @@ Explode modifier is present.
 
 Array modifier is present.
 
-#### Variable.default: Optional[str]
+#### Variable.default: (str | None)
 
 Specified default value, or `None`.
 

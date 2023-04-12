@@ -1,6 +1,6 @@
 """Variable class for URITemplate."""
 
-from typing import Optional
+from __future__ import annotations
 
 from .charset import Charset
 
@@ -18,7 +18,7 @@ class VariableInvalidError(Exception):
         return 'Bad variable: ' + self.variable
 
 
-class Variable(object):
+class Variable:
     """
     A template variable.
 
@@ -29,7 +29,7 @@ class Variable(object):
     max_length: int
     explode: bool
     array: bool
-    default: Optional[str]
+    default: (str | None)
 
     def __init__(self, var_spec: str) -> None:
         self.name = ''

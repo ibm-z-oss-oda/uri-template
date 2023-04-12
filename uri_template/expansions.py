@@ -1,10 +1,15 @@
 """Process URI templates per http://tools.ietf.org/html/rfc6570."""
 
+from __future__ import annotations
+
 import collections
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, cast
+from typing import Any, TYPE_CHECKING, cast
 
 from .charset import Charset
 from .variable import Variable
+
+if (TYPE_CHECKING):
+    from collections.abc import Iterable, Mapping
 
 
 class ExpansionFailedError(Exception):
@@ -20,7 +25,7 @@ class ExpansionFailedError(Exception):
         return 'Bad expansion: ' + self.variable
 
 
-class Expansion(object):
+class Expansion:
     """
     Base class for template expansions.
 
@@ -65,7 +70,7 @@ class Expansion(object):
         """Encode a value into uri encoding."""
         return self._encode(value, Charset.UNRESERVED, False)
 
-    def _uri_encode_name(self, name: Union[str, int]) -> str:
+    def _uri_encode_name(self, name: (str | int)) -> str:
         """Encode a variable name into uri encoding."""
         return self._encode(str(name), Charset.UNRESERVED + Charset.RESERVED, True) if (name) else ''
 
@@ -83,8 +88,8 @@ class Expansion(object):
             return self._join(prefix, joiner, self._uri_encode_value(value[:variable.max_length]))
         return self._join(prefix, joiner, self._uri_encode_value(value))
 
-    def _encode_dict_item(self, variable: Variable, name: str, key: Union[int, str], item: Any,
-                          delim: str, prefix: str, joiner: str, first: bool) -> Optional[str]:
+    def _encode_dict_item(self, variable: Variable, name: str, key: (int | str), item: Any,
+                          delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
         """Encode a dict item for a variable."""
         joiner = '=' if (variable.explode) else ','
         if (variable.array):
@@ -95,7 +100,7 @@ class Expansion(object):
         return self._encode_var(variable, str(key), item, delim, prefix, joiner, False)
 
     def _encode_list_item(self, variable: Variable, name: str, index: int, item: Any,
-                          delim: str, prefix: str, joiner: str, first: bool) -> Optional[str]:
+                          delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
         """Encode a list item for a variable."""
         if (variable.array):
             prefix = prefix + '[' + str(index) + ']' if (prefix) else ''
@@ -103,7 +108,7 @@ class Expansion(object):
         return self._encode_var(variable, name, item, delim, prefix, '.', False)
 
     def _encode_var(self, variable: Variable, name: str, value: Any,
-                    delim: str = ',', prefix: str = '', joiner: str = '=', first: bool = True) -> Optional[str]:
+                    delim: str = ',', prefix: str = '', joiner: str = '=', first: bool = True) -> (str | None):
         """Encode a variable."""
         if (isinstance(value, str)):
             return self._encode_str(variable, name, value, prefix, joiner, first)
@@ -124,11 +129,11 @@ class Expansion(object):
         else:
             return self._encode_str(variable, name, str(value), prefix, joiner, first)
 
-    def expand(self, values: Dict[str, Any]) -> Optional[str]:
+    def expand(self, values: Mapping[str, Any]) -> (str | None):
         """Expand values."""
         return None
 
-    def partial(self, values: Dict[str, Any]) -> str:
+    def partial(self, values: Mapping[str, Any]) -> str:
         """Perform partial expansion."""
         return ''
 
@@ -146,7 +151,7 @@ class Literal(Expansion):
         super().__init__()
         self.value = value
 
-    def expand(self, values: Dict[str, Any]) -> Optional[str]:
+    def expand(self, values: Mapping[str, Any]) -> (str | None):
         """Perform exansion."""
         return self._encode(self.value, (Charset.UNRESERVED + Charset.RESERVED), True)
 
@@ -168,7 +173,7 @@ class ExpressionExpansion(Expansion):
     var_joiner = ','
     partial_joiner = ','
 
-    vars: List[Variable]
+    vars: list[Variable]
     trailing_joiner: str = ''
 
     def __init__(self, variables: str) -> None:
@@ -188,13 +193,13 @@ class ExpressionExpansion(Expansion):
         """Get names of all variables."""
         return [var.name for var in self.vars]
 
-    def _expand_var(self, variable: Variable, value: Any) -> Optional[str]:
+    def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
         return self._encode_var(variable, self._uri_encode_name(variable.name), value)
 
-    def expand(self, values: Dict[str, Any]) -> Optional[str]:
+    def expand(self, values: Mapping[str, Any]) -> (str | None):
         """Expand all variables, skip missing values."""
-        expanded_vars: List[str] = []
+        expanded_vars: list[str] = []
         for var in self.vars:
             value = values.get(var.name, var.default)
             if (value is not None):
@@ -206,11 +211,11 @@ class ExpressionExpansion(Expansion):
                     + self.trailing_joiner)
         return None
 
-    def partial(self, values: Dict[str, Any]) -> str:
+    def partial(self, values: Mapping[str, Any]) -> str:
         """Expand all variables, replace missing values with expansions."""
-        expanded_vars: List[str] = []
-        missing_vars: List[Variable] = []
-        result: List[Tuple[Optional[List[str]], Optional[List[Variable]]]] = []
+        expanded_vars: list[str] = []
+        missing_vars: list[Variable] = []
+        result: list[tuple[(list[str] | None), (list[Variable] | None)]] = []
         for var in self.vars:
             value = values.get(var.name, var.default)
             if (value is not None):
@@ -240,7 +245,7 @@ class ExpressionExpansion(Expansion):
             else:
                 output += ((self.output_prefix if (first and not last) else (self.var_joiner if (not last) else ''))
                            + '{' + (self.operator if (first) else self.partial_operator)
-                           + ','.join([str(var) for var in cast(List[Variable], missing)])
+                           + ','.join([str(var) for var in cast('list[Variable]', missing)])
                            + (self.partial_joiner if (not last) else '') + '}')
             first = False
         return output
@@ -310,7 +315,7 @@ class LabelExpansion(ExpressionExpansion):
     def __init__(self, variables: str) -> None:
         super().__init__(variables[1:])
 
-    def _expand_var(self, variable: Variable, value: Any) -> Optional[str]:
+    def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
         return self._encode_var(variable, self._uri_encode_name(variable.name), value,
                                 delim=('.' if variable.explode else ','))
@@ -332,7 +337,7 @@ class PathExpansion(ExpressionExpansion):
     def __init__(self, variables: str) -> None:
         super().__init__(variables[1:])
 
-    def _expand_var(self, variable: Variable, value: Any) -> Optional[str]:
+    def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
         return self._encode_var(variable, self._uri_encode_name(variable.name), value,
                                 delim=('/' if variable.explode else ','))
@@ -363,8 +368,8 @@ class PathStyleExpansion(ExpressionExpansion):
             prefix = self._join(prefix, '.', name)
         return super()._encode_str(variable, name, value, prefix, joiner, first)
 
-    def _encode_dict_item(self, variable: Variable, name: str, key: Union[int, str], item: Any,
-                          delim: str, prefix: str, joiner: str, first: bool) -> Optional[str]:
+    def _encode_dict_item(self, variable: Variable, name: str, key: (int | str), item: Any,
+                          delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
         """Encode a dict item for a variable."""
         if (variable.array):
             if (name):
@@ -382,7 +387,7 @@ class PathStyleExpansion(ExpressionExpansion):
                                 delim, prefix, joiner, False)
 
     def _encode_list_item(self, variable: Variable, name: str, index: int, item: Any,
-                          delim: str, prefix: str, joiner: str, first: bool) -> Optional[str]:
+                          delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
         """Encode a list item for a variable."""
         if (variable.array):
             if (name):
@@ -390,7 +395,7 @@ class PathStyleExpansion(ExpressionExpansion):
             return self._encode_var(variable, str(index), item, delim, prefix, joiner, False)
         return self._encode_var(variable, name, item, delim, prefix, '=' if (variable.explode) else '.', False)
 
-    def _expand_var(self, variable: Variable, value: Any) -> Optional[str]:
+    def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
         if (variable.explode):
             return self._encode_var(variable, self._uri_encode_name(variable.name), value, delim=';')
@@ -414,7 +419,7 @@ class FormStyleQueryExpansion(PathStyleExpansion):
     def __init__(self, variables: str) -> None:
         super().__init__(variables)
 
-    def _expand_var(self, variable: Variable, value: Any) -> Optional[str]:
+    def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
         if (variable.explode):
             return self._encode_var(variable, self._uri_encode_name(variable.name), value, delim='&')
@@ -451,7 +456,7 @@ class CommaExpansion(ExpressionExpansion):
     def __init__(self, variables: str) -> None:
         super().__init__(variables[1:])
 
-    def _expand_var(self, variable: Variable, value: Any) -> Optional[str]:
+    def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
         return self._encode_var(variable, self._uri_encode_name(variable.name), value,
                                 delim=('.' if variable.explode else ','))
@@ -470,7 +475,7 @@ class ReservedCommaExpansion(ReservedExpansion):
     def __init__(self, variables: str) -> None:
         super().__init__(variables[1:])
 
-    def _expand_var(self, variable: Variable, value: Any) -> Optional[str]:
+    def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
         return self._encode_var(variable, self._uri_encode_name(variable.name), value,
                                 delim=('.' if variable.explode else ','))

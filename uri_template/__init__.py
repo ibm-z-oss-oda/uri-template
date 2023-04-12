@@ -1,19 +1,23 @@
-"""Module to implement something."""
+"""Module for URI Template expansion."""
 
-from typing import Optional
+from __future__ import annotations
 
 from .expansions import ExpansionFailedError
 from .uritemplate import ExpansionInvalidError, ExpansionReservedError, URITemplate
 from .variable import Variable, VariableInvalidError
 
 
-__all__ = [
-    'URITemplate', 'Variable',
-    'ExpansionInvalidError', 'ExpansionReservedError', 'VariableInvalidError', 'ExpansionFailedError',
-]
+__all__ = (
+    'URITemplate',
+    'Variable',
+    'ExpansionInvalidError',
+    'ExpansionReservedError',
+    'VariableInvalidError',
+    'ExpansionFailedError',
+)
 
 
-def expand(template: str, **kwargs) -> Optional[str]:
+def expand(template: str, **kwargs) -> (str | None):
     try:
         templ = URITemplate(template)
         return templ.expand(**kwargs)
@@ -21,7 +25,7 @@ def expand(template: str, **kwargs) -> Optional[str]:
         return None
 
 
-def partial(template: str, **kwargs) -> Optional[str]:
+def partial(template: str, **kwargs) -> (str | None):
     try:
         templ = URITemplate(template)
         return str(templ.partial(**kwargs))

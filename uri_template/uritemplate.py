@@ -1,15 +1,19 @@
 """Process URI templates per http://tools.ietf.org/html/rfc6570."""
 
-import collections
+from __future__ import annotations
+
 import re
-from typing import Dict, Iterable, List
+from typing import TYPE_CHECKING
 
 from .expansions import (CommaExpansion, Expansion,
                          FormStyleQueryContinuation, FormStyleQueryExpansion,
                          FragmentExpansion, LabelExpansion, Literal,
                          PathExpansion, PathStyleExpansion,
                          ReservedCommaExpansion, ReservedExpansion, SimpleExpansion)
-from .variable import Variable
+
+if (TYPE_CHECKING):
+    from collections.abc import Iterable
+    from .variable import Variable
 
 
 class ExpansionReservedError(Exception):
@@ -38,14 +42,14 @@ class ExpansionInvalidError(Exception):
         return 'Bad expansion: ' + self.expansion
 
 
-class URITemplate(object):
+class URITemplate:
     """
     URI Template object.
 
     Constructor may raise ExpansionReservedError, ExpansionInvalidError, or VariableInvalidError.
     """
 
-    expansions: List[Expansion]
+    expansions: list[Expansion]
 
     def __init__(self, template: str) -> None:
         self.expansions = []
@@ -88,7 +92,7 @@ class URITemplate(object):
     @property
     def variables(self) -> Iterable[Variable]:
         """Get all variables in template."""
-        vars: Dict[str, Variable] = collections.OrderedDict()
+        vars: dict[str, Variable] = {}
         for expansion in self.expansions:
             for var in expansion.variables:
                 vars[var.name] = var
@@ -97,7 +101,7 @@ class URITemplate(object):
     @property
     def variable_names(self) -> Iterable[str]:
         """Get names of all variables in template."""
-        vars: Dict[str, Variable] = collections.OrderedDict()
+        vars: dict[str, Variable] = {}
         for expansion in self.expansions:
             for var in expansion.variables:
                 vars[var.name] = var
@@ -112,7 +116,7 @@ class URITemplate(object):
         expanded = [expansion.expand(kwargs) for expansion in self.expansions]
         return ''.join([expansion for expansion in expanded if (expansion is not None)])
 
-    def partial(self, **kwargs) -> 'URITemplate':
+    def partial(self, **kwargs) -> URITemplate:
         """
         Expand the template, preserving expansions for missing variables.
 
