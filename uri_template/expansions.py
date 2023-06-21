@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import collections
-from typing import Any, TYPE_CHECKING, cast
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any, ClassVar, TYPE_CHECKING, cast
 
-from .charset import Charset
 from .variable import Variable
 
 if (TYPE_CHECKING):
-    from collections.abc import Iterable, Mapping
+    from .charset import Charset
 
 
 class ExpansionFailedError(Exception):
@@ -32,8 +31,12 @@ class Expansion:
     https://tools.ietf.org/html/rfc6570#section-3
     """
 
-    def __init__(self) -> None:
-        pass
+    __slots__ = ('_charset', )
+
+    _charset: type[Charset]
+
+    def __init__(self, charset: type[Charset]) -> None:
+        self._charset = charset
 
     @property
     def variables(self) -> Iterable[Variable]:
@@ -55,24 +58,24 @@ class Expansion:
                 output += codepoint
             elif (pct_encoded and ('%' == codepoint)
                   and ((index + 2) < len(value))
-                  and (value[index + 1] in Charset.HEX_DIGIT)
-                  and (value[index + 2] in Charset.HEX_DIGIT)):
+                  and (value[index + 1] in self._charset.HEX_DIGIT)
+                  and (value[index + 2] in self._charset.HEX_DIGIT)):
                 output += value[index:index + 3]
                 index += 2
             else:
                 utf8 = codepoint.encode('utf8')
                 for byte in utf8:
-                    output += '%' + Charset.HEX_DIGIT[int(byte / 16)] + Charset.HEX_DIGIT[byte % 16]
+                    output += '%' + self._charset.HEX_DIGIT[int(byte / 16)] + self._charset.HEX_DIGIT[byte % 16]
             index += 1
         return output
 
     def _uri_encode_value(self, value: str) -> str:
         """Encode a value into uri encoding."""
-        return self._encode(value, Charset.UNRESERVED, False)
+        return self._encode(value, self._charset.UNRESERVED, False)
 
     def _uri_encode_name(self, name: (str | int)) -> str:
         """Encode a variable name into uri encoding."""
-        return self._encode(str(name), Charset.UNRESERVED + Charset.RESERVED, True) if (name) else ''
+        return self._encode(str(name), self._charset.NAME, True) if (name) else ''
 
     def _join(self, prefix: str, joiner: str, value: str) -> str:
         """Join a prefix to a value."""
@@ -88,7 +91,7 @@ class Expansion:
             return self._join(prefix, joiner, self._uri_encode_value(value[:variable.max_length]))
         return self._join(prefix, joiner, self._uri_encode_value(value))
 
-    def _encode_dict_item(self, variable: Variable, name: str, key: (int | str), item: Any,
+    def _encode_dict_item(self, variable: Variable, name: str, key: (str | int), item: Any,
                           delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
         """Encode a dict item for a variable."""
         joiner = '=' if (variable.explode) else ','
@@ -97,28 +100,28 @@ class Expansion:
             prefix = (prefix + '[' + name + ']') if (prefix and not first) else name
         else:
             prefix = self._join(prefix, '.', self._uri_encode_name(key))
-        return self._encode_var(variable, str(key), item, delim, prefix, joiner, False)
+        return self._encode_var(variable, str(key), item, delim=delim, prefix=prefix, joiner=joiner, first=False)
 
     def _encode_list_item(self, variable: Variable, name: str, index: int, item: Any,
                           delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
         """Encode a list item for a variable."""
         if (variable.array):
             prefix = prefix + '[' + str(index) + ']' if (prefix) else ''
-            return self._encode_var(variable, '', item, delim, prefix, joiner, False)
-        return self._encode_var(variable, name, item, delim, prefix, '.', False)
+            return self._encode_var(variable, '', item, delim=delim, prefix=prefix, joiner=joiner, first=False)
+        return self._encode_var(variable, name, item, delim=delim, prefix=prefix, joiner='.', first=False)
 
     def _encode_var(self, variable: Variable, name: str, value: Any,
-                    delim: str = ',', prefix: str = '', joiner: str = '=', first: bool = True) -> (str | None):
+                    *, delim: str = ',', prefix: str = '', joiner: str = '=', first: bool = True) -> (str | None):
         """Encode a variable."""
         if (isinstance(value, str)):
             return self._encode_str(variable, name, value, prefix, joiner, first)
-        elif (isinstance(value, collections.abc.Mapping)):
+        elif (isinstance(value, Mapping)):
             if (len(value)):
                 encoded_items = [self._encode_dict_item(variable, name, key, value[key], delim, prefix, joiner, first)
                                  for key in value.keys()]
                 return delim.join([item for item in encoded_items if (item is not None)])
             return None
-        elif (isinstance(value, collections.abc.Sequence)):
+        elif (isinstance(value, Sequence)):
             if (len(value)):
                 encoded_items = [self._encode_list_item(variable, name, index, item, delim, prefix, joiner, first)
                                  for index, item in enumerate(value)]
@@ -145,15 +148,17 @@ class Literal(Expansion):
     https://tools.ietf.org/html/rfc6570#section-3.1
     """
 
+    __slots__ = ('value', )
+
     value: str
 
-    def __init__(self, value: str) -> None:
-        super().__init__()
+    def __init__(self, value: str, charset: type[Charset]) -> None:
+        super().__init__(charset)
         self.value = value
 
     def expand(self, values: Mapping[str, Any]) -> (str | None):
         """Perform exansion."""
-        return self._encode(self.value, (Charset.UNRESERVED + Charset.RESERVED), True)
+        return self._encode(self.value, (self._charset.UNRESERVED + self._charset.RESERVED), True)
 
     def __str__(self) -> str:
         """Convert to string."""
@@ -167,21 +172,25 @@ class ExpressionExpansion(Expansion):
     https://tools.ietf.org/html/rfc6570#section-3.2
     """
 
-    operator = ''
-    partial_operator = ','
-    output_prefix = ''
-    var_joiner = ','
-    partial_joiner = ','
+    __slots__ = ('vars', 'trailing_joiner')
+
+    operator: ClassVar[str] = ''
+    partial_operator: ClassVar[str] = ','
+    output_prefix: ClassVar[str] = ''
+    var_joiner: ClassVar[str] = ','
+    partial_joiner: ClassVar[str] = ','
 
     vars: list[Variable]
-    trailing_joiner: str = ''
+    trailing_joiner: str
 
-    def __init__(self, variables: str) -> None:
-        super().__init__()
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(charset)
         if (variables and (variables[-1] in (',', '.', '/', ';', '&'))):
             self.trailing_joiner = variables[-1]
             variables = variables[:-1]
-        self.vars = [Variable(var) for var in variables.split(',')]
+        else:
+            self.trailing_joiner = ''
+        self.vars = [Variable(var, charset) for var in variables.split(',')]
 
     @property
     def variables(self) -> Iterable[Variable]:
@@ -263,8 +272,10 @@ class SimpleExpansion(ExpressionExpansion):
 
     """
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables)
+    __slots__ = ()
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables, charset)
 
 
 class ReservedExpansion(ExpressionExpansion):
@@ -274,15 +285,17 @@ class ReservedExpansion(ExpressionExpansion):
     https://tools.ietf.org/html/rfc6570#section-3.2.3
     """
 
-    operator = '+'
-    partial_operator = ',+'
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables[1:])
+    operator: ClassVar[str] = '+'
+    partial_operator: ClassVar[str] = ',+'
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables[1:], charset)
 
     def _uri_encode_value(self, value: str) -> str:
         """Encode a value into uri encoding."""
-        return self._encode(value, (Charset.UNRESERVED + Charset.RESERVED), True)
+        return self._encode(value, (self._charset.UNRESERVED + self._charset.RESERVED), True)
 
 
 class FragmentExpansion(ReservedExpansion):
@@ -292,11 +305,13 @@ class FragmentExpansion(ReservedExpansion):
     https://tools.ietf.org/html/rfc6570#section-3.2.4
     """
 
-    operator = '#'
-    output_prefix = '#'
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables)
+    operator: ClassVar[str] = '#'
+    output_prefix: ClassVar[str] = '#'
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables, charset)
 
 
 class LabelExpansion(ExpressionExpansion):
@@ -306,14 +321,16 @@ class LabelExpansion(ExpressionExpansion):
     https://tools.ietf.org/html/rfc6570#section-3.2.5
     """
 
-    operator = '.'
-    partial_operator = '.'
-    output_prefix = '.'
-    var_joiner = '.'
-    partial_joiner = '.'
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables[1:])
+    operator: ClassVar[str] = '.'
+    partial_operator: ClassVar[str] = '.'
+    output_prefix: ClassVar[str] = '.'
+    var_joiner: ClassVar[str] = '.'
+    partial_joiner: ClassVar[str] = '.'
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables[1:], charset)
 
     def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
@@ -328,14 +345,16 @@ class PathExpansion(ExpressionExpansion):
     https://tools.ietf.org/html/rfc6570#section-3.2.6
     """
 
-    operator = '/'
-    partial_operator = '/'
-    output_prefix = '/'
-    var_joiner = '/'
-    partial_joiner = '/'
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables[1:])
+    operator: ClassVar[str] = '/'
+    partial_operator: ClassVar[str] = '/'
+    output_prefix: ClassVar[str] = '/'
+    var_joiner: ClassVar[str] = '/'
+    partial_joiner: ClassVar[str] = '/'
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables[1:], charset)
 
     def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
@@ -350,14 +369,16 @@ class PathStyleExpansion(ExpressionExpansion):
     https://tools.ietf.org/html/rfc6570#section-3.2.7
     """
 
-    operator = ';'
-    partial_operator = ';'
-    output_prefix = ';'
-    var_joiner = ';'
-    partial_joiner = ';'
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables[1:])
+    operator: ClassVar[str] = ';'
+    partial_operator: ClassVar[str] = ';'
+    output_prefix: ClassVar[str] = ';'
+    var_joiner: ClassVar[str] = ';'
+    partial_joiner: ClassVar[str] = ';'
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables[1:], charset)
 
     def _encode_str(self, variable: Variable, name: str, value: Any, prefix: str, joiner: str, first: bool) -> str:
         """Encode a string for a variable."""
@@ -368,7 +389,7 @@ class PathStyleExpansion(ExpressionExpansion):
             prefix = self._join(prefix, '.', name)
         return super()._encode_str(variable, name, value, prefix, joiner, first)
 
-    def _encode_dict_item(self, variable: Variable, name: str, key: (int | str), item: Any,
+    def _encode_dict_item(self, variable: Variable, name: str, key: (str | int), item: Any,
                           delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
         """Encode a dict item for a variable."""
         if (variable.array):
@@ -384,7 +405,7 @@ class PathStyleExpansion(ExpressionExpansion):
             prefix = self._join(prefix, '.', self._uri_encode_name(key))
             joiner = ','
         return self._encode_var(variable, self._uri_encode_name(key) if (not variable.array) else '', item,
-                                delim, prefix, joiner, False)
+                                delim=delim, prefix=prefix, joiner=joiner, first=False)
 
     def _encode_list_item(self, variable: Variable, name: str, index: int, item: Any,
                           delim: str, prefix: str, joiner: str, first: bool) -> (str | None):
@@ -392,8 +413,9 @@ class PathStyleExpansion(ExpressionExpansion):
         if (variable.array):
             if (name):
                 prefix = prefix + '[' + name + ']' if (prefix) else name
-            return self._encode_var(variable, str(index), item, delim, prefix, joiner, False)
-        return self._encode_var(variable, name, item, delim, prefix, '=' if (variable.explode) else '.', False)
+            return self._encode_var(variable, str(index), item, delim=delim, prefix=prefix, joiner=joiner, first=False)
+        return self._encode_var(variable, name, item, delim=delim, prefix=prefix,
+                                joiner=('=' if (variable.explode) else '.'), first=False)
 
     def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
@@ -410,14 +432,16 @@ class FormStyleQueryExpansion(PathStyleExpansion):
     https://tools.ietf.org/html/rfc6570#section-3.2.8
     """
 
-    operator = '?'
-    partial_operator = '&'
-    output_prefix = '?'
-    var_joiner = '&'
-    partial_joiner = '&'
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables)
+    operator: ClassVar[str] = '?'
+    partial_operator: ClassVar[str] = '&'
+    output_prefix: ClassVar[str] = '?'
+    var_joiner: ClassVar[str] = '&'
+    partial_joiner: ClassVar[str] = '&'
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables, charset)
 
     def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
@@ -434,11 +458,13 @@ class FormStyleQueryContinuation(FormStyleQueryExpansion):
     https://tools.ietf.org/html/rfc6570#section-3.2.9
     """
 
-    operator = '&'
-    output_prefix = '&'
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables)
+    operator: ClassVar[str] = '&'
+    output_prefix: ClassVar[str] = '&'
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables, charset)
 
 # non-standard extension
 
@@ -450,11 +476,13 @@ class CommaExpansion(ExpressionExpansion):
     Non-standard extension to support partial expansions.
     """
 
-    operator = ','
-    output_prefix = ','
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables[1:])
+    operator: ClassVar[str] = ','
+    output_prefix: ClassVar[str] = ','
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables[1:], charset)
 
     def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""
@@ -469,11 +497,13 @@ class ReservedCommaExpansion(ReservedExpansion):
     Non-standard extension to support partial expansions.
     """
 
-    operator = ',+'
-    output_prefix = ','
+    __slots__ = ()
 
-    def __init__(self, variables: str) -> None:
-        super().__init__(variables[1:])
+    operator: ClassVar[str] = ',+'
+    output_prefix: ClassVar[str] = ','
+
+    def __init__(self, variables: str, charset: type[Charset]) -> None:
+        super().__init__(variables[1:], charset)
 
     def _expand_var(self, variable: Variable, value: Any) -> (str | None):
         """Expand a single variable."""

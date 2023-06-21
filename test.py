@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Run comprehensive test suite."""
 
-import collections
 import glob
 import json
 import os
@@ -49,7 +48,7 @@ def run_tests(test_file_search: str) -> int:
     for test_file_path in sorted(glob.glob(test_file_search)):
         print('Running tests from: ' + test_file_path)
         with open(test_file_path, encoding='utf-8') as test_file:
-            test_data = json.load(test_file, object_pairs_hook=collections.OrderedDict)
+            test_data = json.load(test_file)
             for test_set_name in test_data:
                 print(test_set_name + ':')
                 test_set = test_data[test_set_name]
@@ -81,10 +80,12 @@ def run_tests(test_file_search: str) -> int:
                         partial = template.partial(**test_set['partial_variables'])
                         fail_count += _check_result(test[0] + ' partial', str(partial), expected_result)
                         if (2 < len(test)):
-                            fail_count += _check_result(test[0] + ' expanded partial == expanded', partial.expand(), template.expand(**test_set['partial_variables']))
+                            fail_count += _check_result(test[0] + ' expanded partial == expanded', partial.expand(),
+                                                        template.expand(**test_set['partial_variables']))
                             result = str(partial.expand(**test_set['variables']))
                             fail_count += _check_result(test[0] + ' completed partial', result, test[2])
-                            fail_count += _check_result(test[0] + ' completed partial == fully expanded', result, str(template.expand(**test_set['variables'])))
+                            fail_count += _check_result(test[0] + ' completed partial == fully expanded', result,
+                                                        str(template.expand(**test_set['variables'])))
                     except Exception:
                         if (expected_result):
                             _fail(test[0], 'Exception', expected_result)

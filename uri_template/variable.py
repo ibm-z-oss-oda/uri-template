@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from .charset import Charset
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from .charset import Charset
 
 
 class VariableInvalidError(Exception):
@@ -25,6 +28,8 @@ class Variable:
     https://tools.ietf.org/html/rfc6570#section-2.3
     """
 
+    __slots__ = ('name', 'key', 'max_length', 'explode', 'array', 'default')
+
     name: str
     key: str
     max_length: int
@@ -32,15 +37,21 @@ class Variable:
     array: bool
     default: (str | None)
 
-    def __init__(self, var_spec: str) -> None:
+    def __init__(self, var_spec: str, charset: type[Charset]) -> None:
         self.name = ''
+        """Variable name."""
         self.key = ''
+        """Key used to get value."""
         self.max_length = 0
+        """Max length in expansions, 0 for unlimited."""
         self.explode = False
+        """Explode values."""
         self.array = False
+        """Array values."""
         self.default = None
+        """Default value."""
 
-        if (var_spec[0:1] not in Charset.VAR_START):
+        if (var_spec[0:1] not in charset.VAR_START):
             raise VariableInvalidError(var_spec)
 
         if ('=' in var_spec):
@@ -50,7 +61,7 @@ class Variable:
             var_spec, max_length = var_spec.split(':', 1)
             if ((0 < len(max_length)) and (len(max_length) < 4)):
                 for digit in max_length:
-                    if (digit not in Charset.DIGIT):
+                    if (digit not in charset.DIGIT):
                         raise VariableInvalidError(var_spec + ':' + max_length)
                 self.max_length = int(max_length)
                 if (not self.max_length):
@@ -70,11 +81,11 @@ class Variable:
             codepoint = var_spec[index]
             if (('%' == codepoint)
                     and ((index + 2) < len(var_spec))
-                    and (var_spec[index + 1] in Charset.HEX_DIGIT)
-                    and (var_spec[index + 2] in Charset.HEX_DIGIT)):
+                    and (var_spec[index + 1] in charset.HEX_DIGIT)
+                    and (var_spec[index + 2] in charset.HEX_DIGIT)):
                 self.key += var_spec[index:index + 3]
                 index += 2
-            elif (codepoint in Charset.VAR_CHAR):
+            elif (codepoint in charset.VAR_CHAR):
                 self.key += codepoint
             elif ('/' == codepoint):
                 self.name = self.key

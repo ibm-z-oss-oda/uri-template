@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from .charset import Charset
 from .expansions import (CommaExpansion, Expansion,
                          FormStyleQueryContinuation, FormStyleQueryExpansion,
                          FragmentExpansion, LabelExpansion, Literal,
@@ -49,7 +50,14 @@ class URITemplate:
     Constructor may raise ExpansionReservedError, ExpansionInvalidError, or VariableInvalidError.
     """
 
+    __slots__ = ('expansions', )
+
     expansions: list[Expansion]
+
+    @classmethod
+    def _charset(cls) -> type[Charset]:
+        """Subclass hook to replace charset."""
+        return Charset
 
     def __init__(self, template: str) -> None:
         self.expansions = []
@@ -59,33 +67,33 @@ class URITemplate:
                 if (('{' == part[0]) and ('}' == part[-1])):
                     expansion = part[1:-1]
                     if (re.match('^([a-zA-Z0-9_]|%[0-9a-fA-F][0-9a-fA-F]).*$', expansion)):
-                        self.expansions.append(SimpleExpansion(expansion))
+                        self.expansions.append(SimpleExpansion(expansion, self._charset()))
                     elif ('+' == part[1]):
-                        self.expansions.append(ReservedExpansion(expansion))
+                        self.expansions.append(ReservedExpansion(expansion, self._charset()))
                     elif ('#' == part[1]):
-                        self.expansions.append(FragmentExpansion(expansion))
+                        self.expansions.append(FragmentExpansion(expansion, self._charset()))
                     elif ('.' == part[1]):
-                        self.expansions.append(LabelExpansion(expansion))
+                        self.expansions.append(LabelExpansion(expansion, self._charset()))
                     elif ('/' == part[1]):
-                        self.expansions.append(PathExpansion(expansion))
+                        self.expansions.append(PathExpansion(expansion, self._charset()))
                     elif (';' == part[1]):
-                        self.expansions.append(PathStyleExpansion(expansion))
+                        self.expansions.append(PathStyleExpansion(expansion, self._charset()))
                     elif ('?' == part[1]):
-                        self.expansions.append(FormStyleQueryExpansion(expansion))
+                        self.expansions.append(FormStyleQueryExpansion(expansion, self._charset()))
                     elif ('&' == part[1]):
-                        self.expansions.append(FormStyleQueryContinuation(expansion))
+                        self.expansions.append(FormStyleQueryContinuation(expansion, self._charset()))
                     elif (',' == part[1]):
                         if ((1 < len(part)) and ('+' == part[2])):
-                            self.expansions.append(ReservedCommaExpansion(expansion))
+                            self.expansions.append(ReservedCommaExpansion(expansion, self._charset()))
                         else:
-                            self.expansions.append(CommaExpansion(expansion))
+                            self.expansions.append(CommaExpansion(expansion, self._charset()))
                     elif (part[1] in '=!@|'):
                         raise ExpansionReservedError(part)
                     else:
                         raise ExpansionInvalidError(part)
                 else:
                     if (('{' not in part) and ('}' not in part)):
-                        self.expansions.append(Literal(part))
+                        self.expansions.append(Literal(part, self._charset()))
                     else:
                         raise ExpansionInvalidError(part)
 
@@ -111,7 +119,7 @@ class URITemplate:
         """
         Expand the template.
 
-        May raise ExpansionFailed if a composite value is passed to a variable with a prefix modifier.
+        May raise ExpansionFailedError if a composite value is passed to a variable with a prefix modifier.
         """
         expanded = [expansion.expand(kwargs) for expansion in self.expansions]
         return ''.join([expansion for expansion in expanded if (expansion is not None)])
@@ -120,7 +128,7 @@ class URITemplate:
         """
         Expand the template, preserving expansions for missing variables.
 
-        May raise ExpansionFailed if a composite value is passed to a variable with a prefix modifier.
+        May raise ExpansionFailedError if a composite value is passed to a variable with a prefix modifier.
         """
         expanded = [expansion.partial(kwargs) for expansion in self.expansions]
         return URITemplate(''.join(expanded))

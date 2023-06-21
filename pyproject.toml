@@ -52,6 +52,7 @@ dev = [
 	'flake8-datetimez',
 	'flake8-docstrings',
 	'flake8-import-order',
+	'flake8-keyword-paramaters',
 	'flake8-literal',
 	'flake8-modern-annotations',
 	'flake8-noqa',

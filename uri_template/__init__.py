@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .charset import Charset
 from .expansions import ExpansionFailedError
 from .uritemplate import ExpansionInvalidError, ExpansionReservedError, URITemplate
 from .variable import Variable, VariableInvalidError
@@ -9,6 +10,7 @@ from .variable import Variable, VariableInvalidError
 
 __all__ = (
     'URITemplate',
+    'Charset',
     'Variable',
     'ExpansionInvalidError',
     'ExpansionReservedError',

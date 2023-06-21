@@ -15,3 +15,4 @@ class Charset:
     RESERVED = GEN_DELIMS + SUB_DELIMS
     VAR_START = ALPHA + DIGIT + '_'
     VAR_CHAR = VAR_START + '.'
+    NAME = UNRESERVED + RESERVED
