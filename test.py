@@ -11,14 +11,13 @@ from uri_template import URITemplate
 
 
 def _pass(test: str, result: Optional[str]) -> None:
-    print('  PASS: "{test}" == {result}'.format(test=test, result=str(result)))
+    print(f'  PASS: "{test}" == {result}')
 
 
 def _fail(test: str, result: Optional[str], expected: Optional[Union[str, List[str]]]) -> None:
     if (isinstance(expected, list)):
-        expected = '\n' + ' or\n'.join(['    "{result}"'.format(result=acceptable) for acceptable in expected])
-    print('* FAIL: "{test}" got: "{result}", expected: "{expected}"'.format(test=test, result=str(result),
-                                                                            expected=expected))
+        expected = '\n' + ' or\n'.join([f'    "{acceptable}"' for acceptable in expected])
+    print(f'* FAIL: "{test}" got: "{result}", expected: "{expected}"')
 
 
 def _check_result(test: str, result: Optional[str], expected_result: Optional[Union[str, List[str]]]) -> int:
@@ -99,6 +98,6 @@ def run_tests(test_file_search: str) -> int:
 if ('__main__' == __name__):      # called from the command line
     fail_count = 0
     fail_count += run_tests(os.path.join('tests', '*.json'))
-    print('{count} failures'.format(count=fail_count))
+    print(f'{fail_count} failures')
     if (fail_count):
         exit(1)
