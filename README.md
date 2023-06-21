@@ -42,6 +42,15 @@ e.g. "{foo=bar}" will expand to "bar" if a value for `foo` is not given.
 
 List and associtative array default values are not supported at this time.
 
+### Specifying Value Keys
+
+Sometimes a URI Template is used to provide glue between an API and a given set of data.
+In this case, the names of values needed in the final URL may not match the data provided 
+for the expansion.
+
+This package allows specifying the key used to pass data into the template. 
+e.g. "{?foo/bar}" will expand to "?foo=<the value provided as bar>"
+
 ### Partial expansion
 
 This package allows partial expansion of URI Templates.

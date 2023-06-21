@@ -26,6 +26,7 @@ class Variable:
     """
 
     name: str
+    key: str
     max_length: int
     explode: bool
     array: bool
@@ -33,6 +34,7 @@ class Variable:
 
     def __init__(self, var_spec: str) -> None:
         self.name = ''
+        self.key = ''
         self.max_length = 0
         self.explode = False
         self.array = False
@@ -70,17 +72,24 @@ class Variable:
                     and ((index + 2) < len(var_spec))
                     and (var_spec[index + 1] in Charset.HEX_DIGIT)
                     and (var_spec[index + 2] in Charset.HEX_DIGIT)):
-                self.name += var_spec[index:index + 3]
+                self.key += var_spec[index:index + 3]
                 index += 2
             elif (codepoint in Charset.VAR_CHAR):
-                self.name += codepoint
+                self.key += codepoint
+            elif ('/' == codepoint):
+                self.name = self.key
+                self.key = ''
             else:
                 raise VariableInvalidError(var_spec + ((':' + str(self.max_length)) if (self.max_length) else '')
                                            + ('[]' if (self.array) else ('*' if (self.explode) else '')))
             index += 1
 
+        self.name = (self.name or self.key)
+        self.key = (self.key or self.name)
+
     def __str__(self) -> str:
         """Convert to string."""
-        return (self.name + ((':' + str(self.max_length)) if (self.max_length) else '')
+        return (self.name + (f'/{self.key}' if (self.key and (self.key != self.name)) else '')
+                + (f':{self.max_length}' if (self.max_length) else '')
                 + ('*' if (self.explode and not self.array) else '') + ('[]' if (self.array) else '')
-                + (('=' + self.default) if (self.default is not None) else ''))
+                + (f'={self.default}' if (self.default is not None) else ''))

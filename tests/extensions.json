@@ -227,6 +227,20 @@
 		 	["{&default=67890}", "&default=67890"]
 		]
 	},
+	"Keyed Values" :
+	{
+		"level": 5,
+		"variables": {
+			 "first": "12345",
+			 "second": "67890"
+		},
+		 "testcases" : [
+			["{one/first}", "12345"],
+		 	["{;one/first}", ";one=12345"],
+		 	["{?two/second}", "?two=67890"],
+		 	["{&one/first,two/second}", "&one=12345&two=67890"]
+		]
+	},
 	"Partial Expansions" :
 	{
 		"level": 5,

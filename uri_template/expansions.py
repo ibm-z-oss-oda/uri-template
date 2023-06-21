@@ -201,7 +201,7 @@ class ExpressionExpansion(Expansion):
         """Expand all variables, skip missing values."""
         expanded_vars: list[str] = []
         for var in self.vars:
-            value = values.get(var.name, var.default)
+            value = values.get(var.key, var.default)
             if (value is not None):
                 expanded_var = self._expand_var(var, value)
                 if (expanded_var is not None):
